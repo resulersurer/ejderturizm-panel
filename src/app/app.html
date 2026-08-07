@@ -1,3 +1,4 @@
+
 @if (isAuthChecking()) {
   <main class="login-shell" aria-label="Panel yükleniyor">
     <section class="login-panel login-panel--loading">
@@ -238,6 +239,89 @@
             } @empty {
               <div class="empty-state">Henüz slider içeriği eklenmedi.</div>
             }
+          </div>
+        </section>
+      } @else if (activeSection() === 'Kategoriler') {
+        <section class="page-heading" aria-labelledby="categories-title">
+          <div>
+            <span>Ana Sayfa İçeriği</span>
+            <h1 id="categories-title">Kategori yönetimi</h1>
+            <p>Tur kategorilerini, program sayılarını, sıralamayı ve yayın durumunu yönetin.</p>
+          </div>
+          <button class="primary-button" type="button" (click)="openCategoryDialog()">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            <span>Yeni Kategori</span>
+          </button>
+        </section>
+
+        <section class="category-admin" aria-label="Kategori listesi">
+          <div class="panel-heading">
+            <div>
+              <span>Tur Kategorileri</span>
+              <h2>{{ categories().length }} kategori, {{ activeCategoryCount() }} yayında</h2>
+            </div>
+            <a href="https://ejderturizm-web.vercel.app/" target="_blank" rel="noreferrer">Sitede Görüntüle</a>
+          </div>
+
+          <div class="table-scroll">
+            <table class="category-table">
+              <thead>
+                <tr>
+                  <th>Kategori</th>
+                  <th>Açıklama</th>
+                  <th>Program</th>
+                  <th>Sıra</th>
+                  <th>Durum</th>
+                  <th><span class="visually-hidden">İşlemler</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (category of categories(); track category.id) {
+                  <tr [class.is-inactive]="!category.active">
+                    <td>
+                      <div class="category-cell">
+                        <span class="category-cell__mark" aria-hidden="true">{{ category.name.charAt(0) }}</span>
+                        <strong>{{ category.name }}</strong>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="category-description" [title]="category.description">
+                        {{ category.description || 'Açıklama eklenmedi.' }}
+                      </span>
+                    </td>
+                    <td><strong class="category-program-count">{{ category.programCount }}</strong></td>
+                    <td><span class="category-order">{{ category.sortOrder }}</span></td>
+                    <td>
+                      <button
+                        type="button"
+                        class="status-badge"
+                        [class.status-badge--published]="category.active"
+                        [class.status-badge--draft]="!category.active"
+                        [disabled]="isBusy()"
+                        (click)="toggleCategoryActive(category)"
+                      >
+                        <span></span>
+                        {{ category.active ? 'Yayında' : 'Pasif' }}
+                      </button>
+                    </td>
+                    <td>
+                      <div class="row-actions">
+                        <button type="button" aria-label="Kategoriyi düzenle" (click)="openEditCategory(category)">
+                          <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                        </button>
+                        <button type="button" aria-label="Kategoriyi sil" (click)="deleteCategory(category.id)">
+                          <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="6" class="empty-state">Henüz kategori eklenmedi.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
           </div>
         </section>
       } @else if (activeSection() === 'Turlar') {
@@ -751,6 +835,53 @@
           <button class="secondary-button" type="button" (click)="closeSlideDialog()">Vazgeç</button>
           <button class="primary-button" type="submit" [disabled]="isBusy()">
             {{ editingSlideId() ? 'Değişiklikleri Kaydet' : 'Slider Ekle' }}
+          </button>
+        </footer>
+      </form>
+    </section>
+  </div>
+}
+
+@if (isCategoryDialogOpen()) {
+  <div class="dialog-backdrop" role="presentation" (click)="closeCategoryDialog()">
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="category-dialog-title" (click)="$event.stopPropagation()">
+      <header class="dialog__header">
+        <div>
+          <span>Kategori Yönetimi</span>
+          <h2 id="category-dialog-title">{{ editingCategoryId() ? 'Kategoriyi düzenle' : 'Yeni kategori ekle' }}</h2>
+        </div>
+        <button class="icon-button" type="button" aria-label="Pencereyi kapat" (click)="closeCategoryDialog()">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </header>
+
+      <form (ngSubmit)="saveCategory()">
+        <label>
+          <span>Kategori adı</span>
+          <input name="categoryName" [(ngModel)]="draftCategory.name" placeholder="Kültür Turları" maxlength="120" required />
+        </label>
+        <label>
+          <span>Kısa açıklama</span>
+          <textarea name="categoryDescription" [(ngModel)]="draftCategory.description" rows="3" maxlength="300" placeholder="Kategori kartında gösterilecek kısa açıklama"></textarea>
+        </label>
+        <div class="dialog__split">
+          <label>
+            <span>Program sayısı</span>
+            <input name="categoryProgramCount" type="number" min="0" max="9999" [(ngModel)]="draftCategory.programCount" />
+          </label>
+          <label>
+            <span>Gösterim sırası</span>
+            <input name="categorySortOrder" type="number" min="0" max="999" [(ngModel)]="draftCategory.sortOrder" />
+          </label>
+        </div>
+        <label class="dialog__toggle">
+          <input name="categoryActive" type="checkbox" [(ngModel)]="draftCategory.active" />
+          <span>Web sitesinde yayınla</span>
+        </label>
+        <footer class="dialog__actions">
+          <button class="secondary-button" type="button" (click)="closeCategoryDialog()">Vazgeç</button>
+          <button class="primary-button" type="submit" [disabled]="isBusy()">
+            {{ editingCategoryId() ? 'Değişiklikleri Kaydet' : 'Kategori Ekle' }}
           </button>
         </footer>
       </form>
