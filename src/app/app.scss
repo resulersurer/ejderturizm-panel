@@ -3,6 +3,114 @@
   min-height: 100vh;
 }
 
+.admin-shell.is-locked {
+  display: none;
+}
+
+.login-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background: #f4f7f7;
+}
+
+.login-panel {
+  display: grid;
+  width: min(430px, 100%);
+  gap: 22px;
+  padding: 32px;
+  border: 1px solid #dce6e5;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 55px rgba(23, 35, 60, 0.1);
+}
+
+.login-panel--loading {
+  justify-items: center;
+  text-align: center;
+}
+
+.login-panel--loading > .material-symbols-outlined {
+  color: #0f8277;
+  font-size: 34px;
+  animation: login-spin 1s linear infinite;
+}
+
+.login-panel__mark {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  border-radius: 7px;
+  color: #ffffff;
+  background: #0f8277;
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.login-panel > div,
+.login-panel form,
+.login-panel label {
+  display: grid;
+  gap: 8px;
+}
+
+.login-panel > div > span,
+.login-panel label > span {
+  color: #0f8277;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.login-panel h1,
+.login-panel p {
+  margin: 0;
+}
+
+.login-panel h1 {
+  color: #17233c;
+  font-size: 1.55rem;
+}
+
+.login-panel p {
+  color: #718090;
+  line-height: 1.6;
+}
+
+.login-panel input {
+  width: 100%;
+  height: 46px;
+  padding: 0 12px;
+  border: 1px solid #d5dfde;
+  border-radius: 7px;
+  outline: none;
+}
+
+.login-panel input:focus {
+  border-color: #159b8c;
+  box-shadow: 0 0 0 3px rgba(21, 155, 140, 0.12);
+}
+
+.login-panel .primary-button {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.form-error {
+  padding: 10px 12px;
+  border-left: 3px solid #d95d43;
+  color: #9f3f2d !important;
+  background: #fff0ec;
+  font-size: 0.78rem;
+}
+
+@keyframes login-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 button {
   border: 0;
 }
@@ -10,6 +118,77 @@ button {
 .admin-shell {
   min-height: 100vh;
   background: #f4f7f7;
+}
+
+.sync-banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 13px 15px;
+  border: 1px solid #dbe8e5;
+  border-radius: 8px;
+  color: #334155;
+  background: #f5faf8;
+}
+
+.sync-banner > .material-symbols-outlined {
+  color: #0f8277;
+  font-size: 22px;
+}
+
+.sync-banner strong,
+.sync-banner p {
+  margin: 0;
+}
+
+.sync-banner p {
+  color: #647386;
+  font-size: 0.76rem;
+}
+
+.sync-banner div {
+  display: grid;
+  gap: 3px;
+}
+
+.sync-banner > button:not(.primary-button) {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 7px;
+  color: #647386;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sync-banner > button .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.sync-banner--warning {
+  border-color: #ead9ae;
+  background: #fff9e9;
+}
+
+.sync-banner--warning > .material-symbols-outlined {
+  color: #9b6b14;
+}
+
+.sync-banner--error {
+  border-color: #efd0c8;
+  background: #fff3ef;
+}
+
+.sync-banner--error > .material-symbols-outlined {
+  color: #d95d43;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .sidebar {
@@ -827,6 +1006,28 @@ tbody tr:hover {
   gap: 12px;
 }
 
+.dialog__checks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.dialog__checks label {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid #dce6e5;
+  border-radius: 7px;
+}
+
+.dialog__checks input {
+  width: 17px;
+  height: 17px;
+  accent-color: #0f8277;
+}
+
 .dialog__actions {
   display: flex;
   justify-content: flex-end;
@@ -975,5 +1176,9 @@ tbody tr:hover {
   .dialog__split {
     grid-template-columns: 1fr;
   }
-}
 
+  .dialog__checks,
+  .sync-banner {
+    grid-template-columns: 1fr;
+  }
+}
