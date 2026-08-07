@@ -48,6 +48,8 @@ function mapTour(row: Record<string, unknown>) {
     status: row['status'],
     featured: row['featured'],
     popular: row['popular'],
+    createdAt: row['created_at'],
+    updatedAt: row['updated_at'],
   };
 }
 
@@ -73,7 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     if (req.method === 'GET') {
       const rows = await sql`
         SELECT id, title, destination, departure_date, duration, price_label,
-               status, featured, popular
+               status, featured, popular, created_at, updated_at
         FROM tours
         ORDER BY departure_date NULLS LAST, created_at DESC
       `;
@@ -101,7 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           (${title}, ${destination}, ${date(body.departureDate)}, ${text(body.duration)},
            ${text(body.priceLabel)}, ${status(body.status)}, ${Boolean(body.featured)}, ${Boolean(body.popular)})
         RETURNING id, title, destination, departure_date, duration, price_label,
-                  status, featured, popular
+                  status, featured, popular, created_at, updated_at
       `;
       res.status(201).json(mapTour(rows[0]));
       return;
@@ -116,7 +118,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     if (req.method === 'PATCH') {
       const existingRows = await sql`
         SELECT id, title, destination, departure_date, duration, price_label,
-               status, featured, popular
+               status, featured, popular, created_at, updated_at
         FROM tours WHERE id = ${id}
       `;
       if (!existingRows.length) {
@@ -147,7 +149,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           updated_at = NOW()
         WHERE id = ${id}
         RETURNING id, title, destination, departure_date, duration, price_label,
-                  status, featured, popular
+                  status, featured, popular, created_at, updated_at
       `;
       res.status(200).json(mapTour(rows[0]));
       return;
