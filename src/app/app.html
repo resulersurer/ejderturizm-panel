@@ -167,6 +167,78 @@
           </button>
         </section>
       }
+      @if (activeSection() === 'Slider') {
+        <section class="page-heading" aria-labelledby="slider-title">
+          <div>
+            <span>Ana Sayfa İçeriği</span>
+            <h1 id="slider-title">Slider yönetimi</h1>
+            <p>Slider görsellerini, metinlerini, sırasını ve yayın durumunu yönetin.</p>
+          </div>
+          <button class="primary-button" type="button" (click)="openSlideDialog()">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            <span>Yeni Slider</span>
+          </button>
+        </section>
+
+        <section class="slider-admin" aria-label="Slider listesi">
+          <div class="panel-heading">
+            <div>
+              <span>Web Sliderı</span>
+              <h2>{{ slides().length }} slider içeriği</h2>
+            </div>
+            <a href="https://ejderturizm-web.vercel.app/" target="_blank" rel="noreferrer">Sitede Görüntüle</a>
+          </div>
+
+          <div class="slider-admin__list">
+            @for (slide of slides(); track slide.id) {
+              <article class="slide-row" [class.is-inactive]="!slide.active">
+                <div
+                  class="slide-row__media"
+                  [style.background-image]="slideBackground(slide.imageUrl)"
+                  role="img"
+                  [attr.aria-label]="slide.title"
+                >
+                  @if (!slide.imageUrl) {
+                    <span class="material-symbols-outlined" aria-hidden="true">image</span>
+                  }
+                  <small>Sıra {{ slide.sortOrder }}</small>
+                </div>
+
+                <div class="slide-row__content">
+                  <span>{{ slide.location || 'Konum belirtilmedi' }}</span>
+                  <h2>{{ slide.title }}</h2>
+                  <p>{{ slide.description || 'Açıklama eklenmedi.' }}</p>
+                </div>
+
+                <div class="slide-row__status">
+                  <button
+                    type="button"
+                    class="status-badge"
+                    [class.status-badge--published]="slide.active"
+                    [class.status-badge--draft]="!slide.active"
+                    [disabled]="isBusy()"
+                    (click)="toggleSlideActive(slide)"
+                  >
+                    <span></span>
+                    {{ slide.active ? 'Yayında' : 'Pasif' }}
+                  </button>
+                </div>
+
+                <div class="row-actions">
+                  <button type="button" aria-label="Sliderı düzenle" (click)="openEditSlide(slide)">
+                    <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                  </button>
+                  <button type="button" aria-label="Sliderı sil" (click)="deleteSlide(slide.id)">
+                    <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                  </button>
+                </div>
+              </article>
+            } @empty {
+              <div class="empty-state">Henüz slider içeriği eklenmedi.</div>
+            }
+          </div>
+        </section>
+      } @else {
       <section class="page-heading" aria-labelledby="dashboard-title">
         <div>
           <span>07 Ağustos 2026, Cuma</span>
@@ -345,6 +417,7 @@
           </div>
         </aside>
       </section>
+      }
     </main>
   </div>
 </div>
@@ -406,3 +479,58 @@
   </div>
 }
 
+@if (isSlideDialogOpen()) {
+  <div class="dialog-backdrop" role="presentation" (click)="closeSlideDialog()">
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="slide-dialog-title" (click)="$event.stopPropagation()">
+      <header class="dialog__header">
+        <div>
+          <span>Slider Yönetimi</span>
+          <h2 id="slide-dialog-title">{{ editingSlideId() ? 'Sliderı düzenle' : 'Yeni slider ekle' }}</h2>
+        </div>
+        <button class="icon-button" type="button" aria-label="Pencereyi kapat" (click)="closeSlideDialog()">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </header>
+
+      <form (ngSubmit)="saveSlide()">
+        <label>
+          <span>Başlık</span>
+          <input name="slideTitle" [(ngModel)]="draftSlide.title" placeholder="Karadeniz Yaylaları" required />
+        </label>
+        <label>
+          <span>Konum</span>
+          <input name="slideLocation" [(ngModel)]="draftSlide.location" placeholder="Trabzon - Rize" />
+        </label>
+        <label>
+          <span>Açıklama</span>
+          <textarea name="slideDescription" [(ngModel)]="draftSlide.description" rows="3" placeholder="Slider üzerinde görünecek kısa açıklama"></textarea>
+        </label>
+        <label>
+          <span>Görsel URL'si</span>
+          <input name="slideImageUrl" type="url" [(ngModel)]="draftSlide.imageUrl" placeholder="https://..." />
+        </label>
+        <div class="dialog__split">
+          <label>
+            <span>Gösterim sırası</span>
+            <input name="slideSortOrder" type="number" min="0" max="999" [(ngModel)]="draftSlide.sortOrder" />
+          </label>
+          <label class="dialog__toggle">
+            <input name="slideActive" type="checkbox" [(ngModel)]="draftSlide.active" />
+            <span>Web sitesinde yayınla</span>
+          </label>
+        </div>
+        @if (draftSlide.imageUrl) {
+          <div class="slide-preview" [style.background-image]="slideBackground(draftSlide.imageUrl)">
+            <span>Görsel önizleme</span>
+          </div>
+        }
+        <footer class="dialog__actions">
+          <button class="secondary-button" type="button" (click)="closeSlideDialog()">Vazgeç</button>
+          <button class="primary-button" type="submit" [disabled]="isBusy()">
+            {{ editingSlideId() ? 'Değişiklikleri Kaydet' : 'Slider Ekle' }}
+          </button>
+        </footer>
+      </form>
+    </section>
+  </div>
+}
