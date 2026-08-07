@@ -1,3 +1,4 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireAuthentication } from './_auth.js';
 import { getDatabase } from './_db.js';
@@ -55,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       const id = idFrom(req);
       const requestedStatus = req.body?.status;
       if (!id || typeof requestedStatus !== 'string' || !statuses.has(requestedStatus as ReservationStatus)) {
-        res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Rezervasyon durumu gecersiz.' });
+        res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Rezervasyon durumu geçersiz.' });
         return;
       }
 
@@ -84,6 +85,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     res.status(405).json({ code: 'METHOD_NOT_ALLOWED' });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'DATABASE_ERROR';
-    res.status(503).json({ code: message, message: 'Rezervasyonlar yuklenemedi.' });
+    res.status(503).json({ code: message, message: 'Rezervasyonlar yüklenemedi.' });
   }
 }
