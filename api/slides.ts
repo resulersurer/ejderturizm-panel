@@ -36,6 +36,8 @@ function mapSlide(row: Record<string, unknown>) {
     imageUrl: row['image_url'],
     sortOrder: Number(row['sort_order']),
     active: Boolean(row['active']),
+    createdAt: row['created_at'],
+    updatedAt: row['updated_at'],
   };
 }
 
@@ -48,7 +50,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     if (req.method === 'GET') {
       const rows = await sql`
-        SELECT id, title, location, description, image_url, sort_order, active
+        SELECT id, title, location, description, image_url, sort_order, active,
+               created_at, updated_at
         FROM slides ORDER BY sort_order, created_at
       `;
       res.status(200).json(rows.map((row) => mapSlide(row)));
@@ -71,7 +74,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         INSERT INTO slides (title, location, description, image_url, sort_order, active)
         VALUES (${title}, ${text(body.location)}, ${text(body.description)}, ${text(body.imageUrl)},
                 ${order(body.sortOrder)}, ${body.active === undefined ? true : Boolean(body.active)})
-        RETURNING id, title, location, description, image_url, sort_order, active
+        RETURNING id, title, location, description, image_url, sort_order, active,
+                  created_at, updated_at
       `;
       res.status(201).json(mapSlide(rows[0]));
       return;
@@ -85,7 +89,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     if (req.method === 'PATCH') {
       const found = await sql`
-        SELECT id, title, location, description, image_url, sort_order, active
+        SELECT id, title, location, description, image_url, sort_order, active,
+               created_at, updated_at
         FROM slides WHERE id = ${id}
       `;
       if (!found.length) {
@@ -111,7 +116,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           active = ${body.active === undefined ? Boolean(current.active) : Boolean(body.active)},
           updated_at = NOW()
         WHERE id = ${id}
-        RETURNING id, title, location, description, image_url, sort_order, active
+        RETURNING id, title, location, description, image_url, sort_order, active,
+                  created_at, updated_at
       `;
       res.status(200).json(mapSlide(rows[0]));
       return;
