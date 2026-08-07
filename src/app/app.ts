@@ -2,7 +2,16 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
-import { Slide, SlideInput, Tour, TourInput, TourService, TourStatus } from './tour.service';
+import {
+  Reservation,
+  ReservationStatus,
+  Slide,
+  SlideInput,
+  Tour,
+  TourInput,
+  TourService,
+  TourStatus,
+} from './tour.service';
 
 type NavItem = {
   label: string;
@@ -73,8 +82,10 @@ export class App implements OnInit {
   protected readonly activeSection = signal('Genel Bakis');
   protected readonly searchTerm = signal('');
   protected readonly statusFilter = signal<TourStatus | 'all'>('all');
+  protected readonly tourWorkspaceView = signal<'tours' | 'reservations'>('tours');
   protected readonly tours = signal<Tour[]>([]);
   protected readonly slides = signal<Slide[]>([]);
+  protected readonly reservations = signal<Reservation[]>([]);
   protected readonly isAuthenticated = signal(false);
   protected readonly isAuthChecking = signal(true);
   protected readonly isBusy = signal(false);
@@ -128,6 +139,14 @@ export class App implements OnInit {
     () =>
       this.tours().filter((tour) => tour.status === 'draft').length +
       this.slides().filter((slide) => !slide.active).length,
+  );
+
+  protected readonly pendingReservationCount = computed(
+    () => this.reservations().filter((reservation) => reservation.status === 'pending').length,
+  );
+
+  protected readonly confirmedReservationCount = computed(
+    () => this.reservations().filter((reservation) => reservation.status === 'confirmed').length,
   );
 
   protected readonly publishedPercentage = computed(() => {
@@ -215,6 +234,7 @@ export class App implements OnInit {
       this.isAuthenticated.set(false);
       this.tours.set([]);
       this.slides.set([]);
+      this.reservations.set([]);
       this.isDataOnline.set(false);
       this.lastSyncAt.set(null);
     }
@@ -438,6 +458,38 @@ export class App implements OnInit {
     this.statusFilter.set((event.target as HTMLSelectElement).value as TourStatus | 'all');
   }
 
+  protected reservationCountForTour(tourId: number): number {
+    return this.reservations().filter((reservation) => reservation.tourId === tourId).length;
+  }
+
+  protected async updateReservationStatus(
+    reservation: Reservation,
+    event: Event,
+  ): Promise<void> {
+    const select = event.target as HTMLSelectElement;
+    const status = select.value as ReservationStatus;
+    if (status === reservation.status || this.isBusy()) {
+      return;
+    }
+
+    this.isBusy.set(true);
+    this.errorMessage.set('');
+    try {
+      const updated = await firstValueFrom(
+        this.tourService.updateReservationStatus(reservation.id, status),
+      );
+      this.reservations.update((reservations) =>
+        reservations.map((item) => (item.id === reservation.id ? updated : item)),
+      );
+      this.notice.set(`Rezervasyon ${this.reservationStatusLabel(status).toLocaleLowerCase('tr-TR')} olarak güncellendi.`);
+    } catch (error) {
+      select.value = reservation.status;
+      this.errorMessage.set(this.errorText(error, 'Rezervasyon durumu güncellenemedi.'));
+    } finally {
+      this.isBusy.set(false);
+    }
+  }
+
   protected tourInitials(title: string): string {
     return title
       .split(' ')
@@ -447,7 +499,11 @@ export class App implements OnInit {
   }
 
   protected statusLabel(status: TourStatus): string {
-    return { published: 'Yayinda', draft: 'Taslak', upcoming: 'Yakinda' }[status];
+    return { published: 'Yayında', draft: 'Taslak', upcoming: 'Yakında' }[status];
+  }
+
+  protected reservationStatusLabel(status: ReservationStatus): string {
+    return { pending: 'Bekliyor', confirmed: 'Onaylandı', cancelled: 'İptal edildi' }[status];
   }
 
   protected formatDate(value: string | null | undefined): string {
@@ -482,6 +538,16 @@ export class App implements OnInit {
     return new Intl.DateTimeFormat('tr-TR', {
       day: '2-digit',
       month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(value));
+  }
+
+  protected formatDateTime(value: string): string {
+    return new Intl.DateTimeFormat('tr-TR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     }).format(new Date(value));
@@ -540,9 +606,23 @@ export class App implements OnInit {
     }
   }
 
+  private async loadReservations(): Promise<boolean> {
+    try {
+      this.reservations.set(await firstValueFrom(this.tourService.listReservations()));
+      return true;
+    } catch (error) {
+      this.errorMessage.set(this.errorText(error, 'Rezervasyonlar yüklenemedi.'));
+      return false;
+    }
+  }
+
   private async loadContent(): Promise<void> {
-    const [toursLoaded, slidesLoaded] = await Promise.all([this.loadTours(), this.loadSlides()]);
-    const isOnline = toursLoaded && slidesLoaded;
+    const [toursLoaded, slidesLoaded, reservationsLoaded] = await Promise.all([
+      this.loadTours(),
+      this.loadSlides(),
+      this.loadReservations(),
+    ]);
+    const isOnline = toursLoaded && slidesLoaded && reservationsLoaded;
     this.isDataOnline.set(isOnline);
     if (isOnline) {
       this.lastSyncAt.set(new Date());
