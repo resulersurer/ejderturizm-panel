@@ -33,6 +33,22 @@ export type Slide = {
 
 export type SlideInput = Omit<Slide, 'id' | 'createdAt' | 'updatedAt'>;
 
+export type ReservationStatus = 'pending' | 'confirmed' | 'cancelled';
+
+export type Reservation = {
+  id: number;
+  tourId: number;
+  tourTitle: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  participants: number;
+  notes: string;
+  status: ReservationStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type SessionResponse = {
   authenticated: boolean;
   configured: boolean;
@@ -88,5 +104,13 @@ export class TourService {
 
   removeSlide(id: number) {
     return this.http.delete<void>(`/api/slides?id=${id}`);
+  }
+
+  listReservations() {
+    return this.http.get<Reservation[]>('/api/reservations');
+  }
+
+  updateReservationStatus(id: number, status: ReservationStatus) {
+    return this.http.patch<Reservation>(`/api/reservations?id=${id}`, { status });
   }
 }
