@@ -1,8 +1,11 @@
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import {
+  Category,
+  CategoryInput,
   Reservation,
   ReservationStatus,
   Slide,
@@ -65,6 +68,22 @@ const emptySlideDraft = (): DraftSlide => ({
   active: true,
 });
 
+type DraftCategory = {
+  name: string;
+  description: string;
+  programCount: number;
+  sortOrder: number;
+  active: boolean;
+};
+
+const emptyCategoryDraft = (): DraftCategory => ({
+  name: '',
+  description: '',
+  programCount: 0,
+  sortOrder: 1,
+  active: true,
+});
+
 @Component({
   selector: 'app-root',
   imports: [FormsModule],
@@ -79,12 +98,15 @@ export class App implements OnInit {
   protected readonly editingTourId = signal<number | null>(null);
   protected readonly isSlideDialogOpen = signal(false);
   protected readonly editingSlideId = signal<number | null>(null);
+  protected readonly isCategoryDialogOpen = signal(false);
+  protected readonly editingCategoryId = signal<number | null>(null);
   protected readonly activeSection = signal('Genel Bakis');
   protected readonly searchTerm = signal('');
   protected readonly statusFilter = signal<TourStatus | 'all'>('all');
   protected readonly tourWorkspaceView = signal<'tours' | 'reservations'>('tours');
   protected readonly tours = signal<Tour[]>([]);
   protected readonly slides = signal<Slide[]>([]);
+  protected readonly categories = signal<Category[]>([]);
   protected readonly reservations = signal<Reservation[]>([]);
   protected readonly isAuthenticated = signal(false);
   protected readonly isAuthChecking = signal(true);
@@ -98,6 +120,7 @@ export class App implements OnInit {
   protected password = '';
   protected draftTour = emptyDraft();
   protected draftSlide = emptySlideDraft();
+  protected draftCategory = emptyCategoryDraft();
 
   protected readonly primaryNavigation: NavItem[] = [
     { label: 'Genel Bakis', icon: 'dashboard' },
@@ -135,10 +158,15 @@ export class App implements OnInit {
     () => this.slides().filter((slide) => slide.active).length,
   );
 
+  protected readonly activeCategoryCount = computed(
+    () => this.categories().filter((category) => category.active).length,
+  );
+
   protected readonly pendingContentCount = computed(
     () =>
       this.tours().filter((tour) => tour.status === 'draft').length +
-      this.slides().filter((slide) => !slide.active).length,
+      this.slides().filter((slide) => !slide.active).length +
+      this.categories().filter((category) => !category.active).length,
   );
 
   protected readonly pendingReservationCount = computed(
@@ -182,8 +210,15 @@ export class App implements OnInit {
       updatedAt: slide.updatedAt,
       tone: slide.active ? 'coral' : 'neutral',
     }));
+    const categoryActivities: ActivityItem[] = this.categories().map((category) => ({
+      id: `category-${category.id}`,
+      title: category.name,
+      detail: category.active ? 'Kategori web sitesinde yayında' : 'Kategori pasife alındı',
+      updatedAt: category.updatedAt,
+      tone: category.active ? 'green' : 'neutral',
+    }));
 
-    return [...tourActivities, ...slideActivities]
+    return [...tourActivities, ...slideActivities, ...categoryActivities]
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       .slice(0, 5);
   });
@@ -234,6 +269,7 @@ export class App implements OnInit {
       this.isAuthenticated.set(false);
       this.tours.set([]);
       this.slides.set([]);
+      this.categories.set([]);
       this.reservations.set([]);
       this.isDataOnline.set(false);
       this.lastSyncAt.set(null);
@@ -446,6 +482,110 @@ export class App implements OnInit {
     }
   }
 
+  protected openCategoryDialog(): void {
+    this.editingCategoryId.set(null);
+    this.draftCategory = {
+      ...emptyCategoryDraft(),
+      sortOrder: this.categories().length + 1,
+    };
+    this.isCategoryDialogOpen.set(true);
+  }
+
+  protected openEditCategory(category: Category): void {
+    this.editingCategoryId.set(category.id);
+    this.draftCategory = {
+      name: category.name,
+      description: category.description,
+      programCount: category.programCount,
+      sortOrder: category.sortOrder,
+      active: category.active,
+    };
+    this.isCategoryDialogOpen.set(true);
+  }
+
+  protected closeCategoryDialog(): void {
+    this.isCategoryDialogOpen.set(false);
+    this.editingCategoryId.set(null);
+    this.draftCategory = emptyCategoryDraft();
+  }
+
+  protected async saveCategory(): Promise<void> {
+    if (!this.draftCategory.name.trim() || this.isBusy()) {
+      return;
+    }
+
+    const payload: CategoryInput = {
+      name: this.draftCategory.name.trim(),
+      description: this.draftCategory.description.trim(),
+      programCount: Number(this.draftCategory.programCount) || 0,
+      sortOrder: Number(this.draftCategory.sortOrder) || 0,
+      active: this.draftCategory.active,
+    };
+
+    this.isBusy.set(true);
+    this.errorMessage.set('');
+    try {
+      const id = this.editingCategoryId();
+      const saved = id
+        ? await firstValueFrom(this.tourService.updateCategory(id, payload))
+        : await firstValueFrom(this.tourService.createCategory(payload));
+      this.categories.update((categories) =>
+        (id
+          ? categories.map((category) => (category.id === id ? saved : category))
+          : [...categories, saved]
+        ).sort((a, b) => a.sortOrder - b.sortOrder),
+      );
+      this.notice.set(id ? 'Kategori güncellendi.' : 'Yeni kategori eklendi.');
+      this.closeCategoryDialog();
+    } catch (error) {
+      this.errorMessage.set(this.errorText(error, 'Kategori kaydedilemedi.'));
+    } finally {
+      this.isBusy.set(false);
+    }
+  }
+
+  protected async toggleCategoryActive(category: Category): Promise<void> {
+    if (this.isBusy()) {
+      return;
+    }
+
+    this.isBusy.set(true);
+    this.errorMessage.set('');
+    try {
+      const updated = await firstValueFrom(
+        this.tourService.updateCategory(category.id, { active: !category.active }),
+      );
+      this.categories.update((categories) =>
+        categories.map((item) => (item.id === category.id ? updated : item)),
+      );
+      this.notice.set(updated.active ? 'Kategori web sitesinde yayınlandı.' : 'Kategori pasife alındı.');
+    } catch (error) {
+      this.errorMessage.set(this.errorText(error, 'Kategori durumu değiştirilemedi.'));
+    } finally {
+      this.isBusy.set(false);
+    }
+  }
+
+  protected async deleteCategory(categoryId: number): Promise<void> {
+    if (!window.confirm('Bu kategoriyi kalıcı olarak silmek istediğinize emin misiniz?')) {
+      return;
+    }
+
+    this.isBusy.set(true);
+    this.errorMessage.set('');
+    try {
+      await firstValueFrom(this.tourService.removeCategory(categoryId));
+      this.categories.update((categories) =>
+        categories.filter((category) => category.id !== categoryId),
+      );
+      this.notice.set('Kategori silindi.');
+    } catch (error) {
+      this.errorMessage.set(this.errorText(error, 'Kategori silinemedi.'));
+    } finally {
+      this.isBusy.set(false);
+    }
+  }
+
   protected slideBackground(imageUrl: string): string | null {
     return imageUrl ? `url("${imageUrl.replaceAll('"', '%22')}")` : null;
   }
@@ -606,6 +746,16 @@ export class App implements OnInit {
     }
   }
 
+  private async loadCategories(): Promise<boolean> {
+    try {
+      this.categories.set(await firstValueFrom(this.tourService.listCategories()));
+      return true;
+    } catch (error) {
+      this.errorMessage.set(this.errorText(error, 'Kategoriler yüklenemedi.'));
+      return false;
+    }
+  }
+
   private async loadReservations(): Promise<boolean> {
     try {
       this.reservations.set(await firstValueFrom(this.tourService.listReservations()));
@@ -617,12 +767,13 @@ export class App implements OnInit {
   }
 
   private async loadContent(): Promise<void> {
-    const [toursLoaded, slidesLoaded, reservationsLoaded] = await Promise.all([
+    const [toursLoaded, slidesLoaded, categoriesLoaded, reservationsLoaded] = await Promise.all([
       this.loadTours(),
       this.loadSlides(),
+      this.loadCategories(),
       this.loadReservations(),
     ]);
-    const isOnline = toursLoaded && slidesLoaded && reservationsLoaded;
+    const isOnline = toursLoaded && slidesLoaded && categoriesLoaded && reservationsLoaded;
     this.isDataOnline.set(isOnline);
     if (isOnline) {
       this.lastSyncAt.set(new Date());
