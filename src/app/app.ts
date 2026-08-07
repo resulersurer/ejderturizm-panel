@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
-import { Tour, TourInput, TourService, TourStatus } from './tour.service';
+import { Slide, SlideInput, Tour, TourInput, TourService, TourStatus } from './tour.service';
 
 type NavItem = {
   label: string;
@@ -30,6 +30,24 @@ const emptyDraft = (): DraftTour => ({
   popular: false,
 });
 
+type DraftSlide = {
+  title: string;
+  location: string;
+  description: string;
+  imageUrl: string;
+  sortOrder: number;
+  active: boolean;
+};
+
+const emptySlideDraft = (): DraftSlide => ({
+  title: '',
+  location: '',
+  description: '',
+  imageUrl: '',
+  sortOrder: 1,
+  active: true,
+});
+
 @Component({
   selector: 'app-root',
   imports: [FormsModule],
@@ -42,10 +60,13 @@ export class App implements OnInit {
   protected readonly isSidebarOpen = signal(false);
   protected readonly isTourDialogOpen = signal(false);
   protected readonly editingTourId = signal<number | null>(null);
+  protected readonly isSlideDialogOpen = signal(false);
+  protected readonly editingSlideId = signal<number | null>(null);
   protected readonly activeSection = signal('Genel Bakis');
   protected readonly searchTerm = signal('');
   protected readonly statusFilter = signal<TourStatus | 'all'>('all');
   protected readonly tours = signal<Tour[]>([]);
+  protected readonly slides = signal<Slide[]>([]);
   protected readonly isAuthenticated = signal(false);
   protected readonly isAuthChecking = signal(true);
   protected readonly isBusy = signal(false);
@@ -55,6 +76,7 @@ export class App implements OnInit {
 
   protected password = '';
   protected draftTour = emptyDraft();
+  protected draftSlide = emptySlideDraft();
 
   protected readonly primaryNavigation: NavItem[] = [
     { label: 'Genel Bakis', icon: 'dashboard' },
@@ -116,7 +138,7 @@ export class App implements OnInit {
       await firstValueFrom(this.tourService.login(this.password));
       this.password = '';
       this.isAuthenticated.set(true);
-      await this.loadTours();
+      await this.loadContent();
     } catch (error) {
       this.errorMessage.set(this.errorText(error, 'Yonetici parolasi dogrulanamadi.'));
     } finally {
@@ -130,6 +152,7 @@ export class App implements OnInit {
     } finally {
       this.isAuthenticated.set(false);
       this.tours.set([]);
+      this.slides.set([]);
     }
   }
 
@@ -140,7 +163,7 @@ export class App implements OnInit {
       await firstValueFrom(this.tourService.setup());
       this.setupRequired.set(false);
       this.notice.set('Veritabani hazirlandi. Web sitesi artik paneldeki turlari kullanacak.');
-      await this.loadTours();
+      await this.loadContent();
     } catch (error) {
       this.errorMessage.set(this.errorText(error, 'Veritabani hazirlanamadi.'));
     } finally {
@@ -242,6 +265,107 @@ export class App implements OnInit {
     }
   }
 
+  protected openSlideDialog(): void {
+    this.editingSlideId.set(null);
+    this.draftSlide = {
+      ...emptySlideDraft(),
+      sortOrder: this.slides().length + 1,
+    };
+    this.isSlideDialogOpen.set(true);
+  }
+
+  protected openEditSlide(slide: Slide): void {
+    this.editingSlideId.set(slide.id);
+    this.draftSlide = {
+      title: slide.title,
+      location: slide.location,
+      description: slide.description,
+      imageUrl: slide.imageUrl,
+      sortOrder: slide.sortOrder,
+      active: slide.active,
+    };
+    this.isSlideDialogOpen.set(true);
+  }
+
+  protected closeSlideDialog(): void {
+    this.isSlideDialogOpen.set(false);
+    this.editingSlideId.set(null);
+    this.draftSlide = emptySlideDraft();
+  }
+
+  protected async saveSlide(): Promise<void> {
+    if (!this.draftSlide.title.trim() || this.isBusy()) {
+      return;
+    }
+
+    const payload: SlideInput = {
+      title: this.draftSlide.title.trim(),
+      location: this.draftSlide.location.trim(),
+      description: this.draftSlide.description.trim(),
+      imageUrl: this.draftSlide.imageUrl.trim(),
+      sortOrder: Number(this.draftSlide.sortOrder) || 0,
+      active: this.draftSlide.active,
+    };
+
+    this.isBusy.set(true);
+    this.errorMessage.set('');
+    try {
+      const id = this.editingSlideId();
+      const saved = id
+        ? await firstValueFrom(this.tourService.updateSlide(id, payload))
+        : await firstValueFrom(this.tourService.createSlide(payload));
+      this.slides.update((slides) =>
+        (id ? slides.map((slide) => (slide.id === id ? saved : slide)) : [...slides, saved]).sort(
+          (a, b) => a.sortOrder - b.sortOrder,
+        ),
+      );
+      this.notice.set(id ? 'Slider guncellendi.' : 'Yeni slider eklendi.');
+      this.closeSlideDialog();
+    } catch (error) {
+      this.errorMessage.set(this.errorText(error, 'Slider kaydedilemedi.'));
+    } finally {
+      this.isBusy.set(false);
+    }
+  }
+
+  protected async toggleSlideActive(slide: Slide): Promise<void> {
+    this.isBusy.set(true);
+    try {
+      const updated = await firstValueFrom(
+        this.tourService.updateSlide(slide.id, { active: !slide.active }),
+      );
+      this.slides.update((slides) =>
+        slides.map((item) => (item.id === slide.id ? updated : item)),
+      );
+      this.notice.set(updated.active ? 'Slider web sitesinde yayinda.' : 'Slider pasife alindi.');
+    } catch (error) {
+      this.errorMessage.set(this.errorText(error, 'Slider durumu degistirilemedi.'));
+    } finally {
+      this.isBusy.set(false);
+    }
+  }
+
+  protected async deleteSlide(slideId: number): Promise<void> {
+    if (!window.confirm('Bu slideri kalici olarak silmek istediginize emin misiniz?')) {
+      return;
+    }
+
+    this.isBusy.set(true);
+    try {
+      await firstValueFrom(this.tourService.removeSlide(slideId));
+      this.slides.update((slides) => slides.filter((slide) => slide.id !== slideId));
+      this.notice.set('Slider silindi.');
+    } catch (error) {
+      this.errorMessage.set(this.errorText(error, 'Slider silinemedi.'));
+    } finally {
+      this.isBusy.set(false);
+    }
+  }
+
+  protected slideBackground(imageUrl: string): string | null {
+    return imageUrl ? `url("${imageUrl.replaceAll('"', '%22')}")` : null;
+  }
+
   protected updateSearch(event: Event): void {
     this.searchTerm.set((event.target as HTMLInputElement).value);
   }
@@ -282,7 +406,7 @@ export class App implements OnInit {
         this.errorMessage.set('Vercel panel projesine PANEL_ADMIN_KEY eklenmesi gerekiyor.');
       }
       if (session.authenticated) {
-        await this.loadTours();
+        await this.loadContent();
       }
     } catch (error) {
       this.errorMessage.set(this.errorText(error, 'Panel sunucusuna ulasilamadi.'));
@@ -303,6 +427,18 @@ export class App implements OnInit {
       }
       this.errorMessage.set(this.errorText(error, 'Turlar yuklenemedi.'));
     }
+  }
+
+  private async loadSlides(): Promise<void> {
+    try {
+      this.slides.set(await firstValueFrom(this.tourService.listSlides()));
+    } catch (error) {
+      this.errorMessage.set(this.errorText(error, 'Sliderlar yuklenemedi.'));
+    }
+  }
+
+  private async loadContent(): Promise<void> {
+    await Promise.all([this.loadTours(), this.loadSlides()]);
   }
 
   private errorText(error: unknown, fallback: string): string {
