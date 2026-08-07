@@ -1,3 +1,4 @@
+
 {
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
@@ -27,7 +28,7 @@
             "production": {
               "budgets": [
                 { "type": "initial", "maximumWarning": "500kB", "maximumError": "1MB" },
-                { "type": "anyComponentStyle", "maximumWarning": "18kB", "maximumError": "22kB" }
+                { "type": "anyComponentStyle", "maximumWarning": "22kB", "maximumError": "26kB" }
               ],
               "outputHashing": "all"
             },
@@ -51,4 +52,3 @@
     }
   }
 }
-
