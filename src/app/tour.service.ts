@@ -13,9 +13,11 @@ export type Tour = {
   status: TourStatus;
   featured: boolean;
   popular: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
-export type TourInput = Omit<Tour, 'id'>;
+export type TourInput = Omit<Tour, 'id' | 'createdAt' | 'updatedAt'>;
 
 export type Slide = {
   id: number;
@@ -25,9 +27,11 @@ export type Slide = {
   imageUrl: string;
   sortOrder: number;
   active: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
-export type SlideInput = Omit<Slide, 'id'>;
+export type SlideInput = Omit<Slide, 'id' | 'createdAt' | 'updatedAt'>;
 
 type SessionResponse = {
   authenticated: boolean;
