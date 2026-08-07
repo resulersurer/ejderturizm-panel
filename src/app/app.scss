@@ -609,10 +609,112 @@ button:disabled {
 }
 
 .tour-panel,
-.activity-panel {
+.activity-panel,
+.slider-admin {
   border: 1px solid #dce6e5;
   border-radius: 8px;
   background: #ffffff;
+}
+
+.slider-admin {
+  overflow: hidden;
+}
+
+.slider-admin__list {
+  display: grid;
+}
+
+.slide-row {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e8eeee;
+}
+
+.slide-row:last-child {
+  border-bottom: 0;
+}
+
+.slide-row.is-inactive {
+  background: #fafcfc;
+}
+
+.slide-row.is-inactive .slide-row__media,
+.slide-row.is-inactive .slide-row__content {
+  opacity: 0.55;
+}
+
+.slide-row__media {
+  position: relative;
+  display: grid;
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 7px;
+  color: #ffffff;
+  background-color: #dbe8e5;
+  background-position: center;
+  background-size: cover;
+}
+
+.slide-row__media::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 48%, rgba(15, 23, 42, 0.72));
+  content: "";
+}
+
+.slide-row__media > .material-symbols-outlined {
+  color: #718090;
+  font-size: 30px;
+}
+
+.slide-row__media small {
+  position: absolute;
+  z-index: 1;
+  right: 9px;
+  bottom: 7px;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.slide-row__content {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.slide-row__content > span {
+  color: #0f8277;
+  font-size: 0.67rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.slide-row__content h2,
+.slide-row__content p {
+  margin: 0;
+}
+
+.slide-row__content h2 {
+  color: #243149;
+  font-size: 1rem;
+}
+
+.slide-row__content p {
+  overflow: hidden;
+  color: #718090;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slide-row > .row-actions {
+  min-width: 70px;
 }
 
 .panel-heading {
@@ -984,9 +1086,9 @@ tbody tr:hover {
   font-weight: 800;
 }
 
-.dialog input {
+.dialog input,
+.dialog textarea {
   width: 100%;
-  height: 43px;
   padding: 0 12px;
   border: 1px solid #d5dfde;
   border-radius: 7px;
@@ -995,7 +1097,19 @@ tbody tr:hover {
   outline: none;
 }
 
-.dialog input:focus {
+.dialog input {
+  height: 43px;
+}
+
+.dialog textarea {
+  min-height: 82px;
+  resize: vertical;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.dialog input:focus,
+.dialog textarea:focus {
   border-color: #159b8c;
   box-shadow: 0 0 0 3px rgba(21, 155, 140, 0.12);
 }
@@ -1026,6 +1140,50 @@ tbody tr:hover {
   width: 17px;
   height: 17px;
   accent-color: #0f8277;
+}
+
+.dialog__toggle {
+  display: flex !important;
+  min-height: 43px;
+  align-items: center;
+  gap: 9px !important;
+  padding: 0 11px;
+  border: 1px solid #dce6e5;
+  border-radius: 7px;
+}
+
+.dialog__toggle input {
+  width: 17px;
+  height: 17px;
+  accent-color: #0f8277;
+}
+
+.slide-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 5;
+  overflow: hidden;
+  border-radius: 7px;
+  background-color: #dbe8e5;
+  background-position: center;
+  background-size: cover;
+}
+
+.slide-preview::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 55%, rgba(15, 23, 42, 0.7));
+  content: "";
+}
+
+.slide-preview span {
+  position: absolute;
+  z-index: 1;
+  bottom: 9px;
+  left: 11px;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
 }
 
 .dialog__actions {
@@ -1073,6 +1231,14 @@ tbody tr:hover {
 }
 
 @media (max-width: 900px) {
+  .slide-row {
+    grid-template-columns: 180px minmax(0, 1fr) auto;
+  }
+
+  .slide-row__status {
+    display: none;
+  }
+
   .sidebar {
     transform: translateX(-100%);
     transition: transform 220ms ease;
@@ -1180,5 +1346,19 @@ tbody tr:hover {
   .dialog__checks,
   .sync-banner {
     grid-template-columns: 1fr;
+  }
+
+  .slide-row {
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+  }
+
+  .slide-row__media,
+  .slide-row__content {
+    grid-column: 1 / -1;
+  }
+
+  .slide-row__content p {
+    white-space: normal;
   }
 }
