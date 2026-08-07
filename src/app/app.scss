@@ -977,6 +977,20 @@ tbody tr:hover {
   line-height: 1.35;
 }
 
+.activity-list div > span {
+  color: #647386;
+  font-size: 0.69rem;
+  line-height: 1.35;
+}
+
+.activity-list__empty {
+  display: block !important;
+  padding: 30px 0 !important;
+  color: #718090;
+  font-size: 0.74rem;
+  text-align: center;
+}
+
 .activity-list small,
 .publish-health small {
   color: #8793a0;
@@ -1019,6 +1033,14 @@ tbody tr:hover {
   height: 7px;
   border-radius: 50%;
   background: #43a36f;
+}
+
+.publish-health strong.is-offline {
+  color: #c6533d;
+}
+
+.publish-health strong.is-offline i {
+  background: #d95d43;
 }
 
 .sidebar-backdrop {
