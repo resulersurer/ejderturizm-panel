@@ -9,6 +9,8 @@
     "watch": "ng build --watch --configuration development"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "@vercel/node": "^5.5.22",
     "@angular/common": "^20.3.0",
     "@angular/compiler": "^20.3.0",
     "@angular/core": "^20.3.0",
@@ -26,4 +28,3 @@
     "typescript": "~5.9.2"
   }
 }
-
