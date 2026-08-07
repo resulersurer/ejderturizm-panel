@@ -241,7 +241,7 @@
       } @else {
       <section class="page-heading" aria-labelledby="dashboard-title">
         <div>
-          <span>07 Ağustos 2026, Cuma</span>
+          <span>{{ overviewDate }}</span>
           <h1 id="dashboard-title">Tur operasyonuna genel bakış</h1>
           <p>Yayın durumlarını kontrol edin, programları güncelleyin ve yeni içerik oluşturun.</p>
         </div>
@@ -258,7 +258,7 @@
             <span class="material-symbols-outlined" aria-hidden="true">travel_explore</span>
           </div>
           <strong>{{ tours().length }}</strong>
-          <small>Bu ay 3 yeni program</small>
+          <small>{{ slides().length }} slider içeriğiyle birlikte yönetiliyor</small>
         </article>
 
         <article class="metric-card metric-card--green">
@@ -267,7 +267,7 @@
             <span class="material-symbols-outlined" aria-hidden="true">campaign</span>
           </div>
           <strong>{{ publishedTourCount() }}</strong>
-          <small>Web sitesinde görünür</small>
+          <small>Turların %{{ publishedPercentage() }} kadarı web sitesinde görünür</small>
         </article>
 
         <article class="metric-card metric-card--coral">
@@ -284,8 +284,8 @@
             <span>Bekleyen İçerik</span>
             <span class="material-symbols-outlined" aria-hidden="true">article</span>
           </div>
-          <strong>7</strong>
-          <small>Onay veya düzenleme bekliyor</small>
+          <strong>{{ pendingContentCount() }}</strong>
+          <small>{{ activeSlideCount() }} aktif slider, taslak ve pasif içerikler izleniyor</small>
         </article>
       </section>
 
@@ -390,30 +390,31 @@
           </div>
 
           <ol class="activity-list">
-            <li>
-              <span class="activity-list__marker activity-list__marker--green"></span>
-              <div><strong>Karadeniz turu yayınlandı</strong><small>Bugün, 10:24</small></div>
-            </li>
-            <li>
-              <span class="activity-list__marker activity-list__marker--coral"></span>
-              <div><strong>Ana slider güncellendi</strong><small>Dün, 17:40</small></div>
-            </li>
-            <li>
-              <span class="activity-list__marker activity-list__marker--gold"></span>
-              <div><strong>Erken rezervasyon kampanyası</strong><small>Dün, 13:15</small></div>
-            </li>
-            <li>
-              <span class="activity-list__marker"></span>
-              <div><strong>Yeni misafir yorumu eklendi</strong><small>05 Ağustos, 16:05</small></div>
-            </li>
+            @for (activity of recentActivities(); track activity.id) {
+              <li>
+                <span
+                  class="activity-list__marker"
+                  [class.activity-list__marker--green]="activity.tone === 'green'"
+                  [class.activity-list__marker--coral]="activity.tone === 'coral'"
+                  [class.activity-list__marker--gold]="activity.tone === 'gold'"
+                ></span>
+                <div>
+                  <strong>{{ activity.title }}</strong>
+                  <span>{{ activity.detail }}</span>
+                  <small>{{ activityTime(activity.updatedAt) }}</small>
+                </div>
+              </li>
+            } @empty {
+              <li class="activity-list__empty">Henüz güncel işlem bulunmuyor.</li>
+            }
           </ol>
 
           <div class="publish-health">
             <div>
               <span>Web sitesi durumu</span>
-              <strong><i></i> Yayında</strong>
+              <strong [class.is-offline]="!isDataOnline()"><i></i> {{ isDataOnline() ? 'Bağlı' : 'Bağlantı yok' }}</strong>
             </div>
-            <small>Son kontrol 2 dakika önce</small>
+            <small>{{ lastSyncLabel() }}</small>
           </div>
         </aside>
       </section>
