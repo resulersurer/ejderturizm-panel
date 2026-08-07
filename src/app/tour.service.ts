@@ -1,3 +1,4 @@
+
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 
@@ -32,6 +33,19 @@ export type Slide = {
 };
 
 export type SlideInput = Omit<Slide, 'id' | 'createdAt' | 'updatedAt'>;
+
+export type Category = {
+  id: number;
+  name: string;
+  description: string;
+  programCount: number;
+  sortOrder: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CategoryInput = Omit<Category, 'id' | 'createdAt' | 'updatedAt'>;
 
 export type ReservationStatus = 'pending' | 'confirmed' | 'cancelled';
 
@@ -104,6 +118,22 @@ export class TourService {
 
   removeSlide(id: number) {
     return this.http.delete<void>(`/api/slides?id=${id}`);
+  }
+
+  listCategories() {
+    return this.http.get<Category[]>('/api/categories');
+  }
+
+  createCategory(category: CategoryInput) {
+    return this.http.post<Category>('/api/categories', category);
+  }
+
+  updateCategory(id: number, category: Partial<CategoryInput>) {
+    return this.http.patch<Category>(`/api/categories?id=${id}`, category);
+  }
+
+  removeCategory(id: number) {
+    return this.http.delete<void>(`/api/categories?id=${id}`);
   }
 
   listReservations() {
