@@ -10,6 +10,14 @@ type NavItem = {
   badge?: string;
 };
 
+type ActivityItem = {
+  id: string;
+  title: string;
+  detail: string;
+  updatedAt: string;
+  tone: 'green' | 'coral' | 'gold' | 'neutral';
+};
+
 type DraftTour = {
   title: string;
   destination: string;
@@ -73,6 +81,8 @@ export class App implements OnInit {
   protected readonly setupRequired = signal(false);
   protected readonly notice = signal('');
   protected readonly errorMessage = signal('');
+  protected readonly isDataOnline = signal(false);
+  protected readonly lastSyncAt = signal<Date | null>(null);
 
   protected password = '';
   protected draftTour = emptyDraft();
@@ -110,9 +120,61 @@ export class App implements OnInit {
     () => this.tours().filter((tour) => tour.status === 'published').length,
   );
 
-  protected readonly nextTour = computed(() =>
-    this.tours().find((tour) => Boolean(tour.departureDate)),
+  protected readonly activeSlideCount = computed(
+    () => this.slides().filter((slide) => slide.active).length,
   );
+
+  protected readonly pendingContentCount = computed(
+    () =>
+      this.tours().filter((tour) => tour.status === 'draft').length +
+      this.slides().filter((slide) => !slide.active).length,
+  );
+
+  protected readonly publishedPercentage = computed(() => {
+    const total = this.tours().length;
+    return total ? Math.round((this.publishedTourCount() / total) * 100) : 0;
+  });
+
+  protected readonly nextTour = computed(() =>
+    this.tours().find(
+      (tour) =>
+        Boolean(tour.departureDate) &&
+        new Date(String(tour.departureDate)).getTime() >= new Date().setHours(0, 0, 0, 0),
+    ),
+  );
+
+  protected readonly recentActivities = computed<ActivityItem[]>(() => {
+    const tourActivities: ActivityItem[] = this.tours().map((tour) => ({
+      id: `tour-${tour.id}`,
+      title: tour.title,
+      detail:
+        tour.status === 'published'
+          ? 'Tur web sitesinde yayında'
+          : tour.status === 'upcoming'
+            ? 'Yaklaşan tur olarak planlandı'
+            : 'Tur taslak olarak bekliyor',
+      updatedAt: tour.updatedAt,
+      tone: tour.status === 'published' ? 'green' : tour.status === 'upcoming' ? 'gold' : 'neutral',
+    }));
+    const slideActivities: ActivityItem[] = this.slides().map((slide) => ({
+      id: `slide-${slide.id}`,
+      title: slide.title,
+      detail: slide.active ? 'Slider web sitesinde yayında' : 'Slider pasife alındı',
+      updatedAt: slide.updatedAt,
+      tone: slide.active ? 'coral' : 'neutral',
+    }));
+
+    return [...tourActivities, ...slideActivities]
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 5);
+  });
+
+  protected readonly overviewDate = new Intl.DateTimeFormat('tr-TR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    weekday: 'long',
+  }).format(new Date());
 
   async ngOnInit(): Promise<void> {
     await this.checkSession();
@@ -153,6 +215,8 @@ export class App implements OnInit {
       this.isAuthenticated.set(false);
       this.tours.set([]);
       this.slides.set([]);
+      this.isDataOnline.set(false);
+      this.lastSyncAt.set(null);
     }
   }
 
@@ -398,6 +462,41 @@ export class App implements OnInit {
     }).format(new Date(value));
   }
 
+  protected activityTime(value: string): string {
+    const timestamp = new Date(value).getTime();
+    if (!Number.isFinite(timestamp)) {
+      return 'Zaman bilgisi yok';
+    }
+
+    const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60_000));
+    if (minutes < 1) {
+      return 'Az önce';
+    }
+    if (minutes < 60) {
+      return `${minutes} dakika önce`;
+    }
+    if (minutes < 1_440) {
+      return `${Math.floor(minutes / 60)} saat önce`;
+    }
+
+    return new Intl.DateTimeFormat('tr-TR', {
+      day: '2-digit',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(value));
+  }
+
+  protected lastSyncLabel(): string {
+    const value = this.lastSyncAt();
+    return value
+      ? `Son senkronizasyon ${new Intl.DateTimeFormat('tr-TR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }).format(value)}`
+      : 'Henüz senkronizasyon yapılmadı';
+  }
+
   private async checkSession(): Promise<void> {
     try {
       const session = await firstValueFrom(this.tourService.session());
@@ -415,30 +514,39 @@ export class App implements OnInit {
     }
   }
 
-  private async loadTours(): Promise<void> {
+  private async loadTours(): Promise<boolean> {
     try {
       this.tours.set(await firstValueFrom(this.tourService.list()));
       this.setupRequired.set(false);
+      return true;
     } catch (error) {
       const response = error as HttpErrorResponse;
       if (response.error?.code === 'SETUP_REQUIRED') {
         this.setupRequired.set(true);
-        return;
+        return false;
       }
       this.errorMessage.set(this.errorText(error, 'Turlar yuklenemedi.'));
+      return false;
     }
   }
 
-  private async loadSlides(): Promise<void> {
+  private async loadSlides(): Promise<boolean> {
     try {
       this.slides.set(await firstValueFrom(this.tourService.listSlides()));
+      return true;
     } catch (error) {
       this.errorMessage.set(this.errorText(error, 'Sliderlar yuklenemedi.'));
+      return false;
     }
   }
 
   private async loadContent(): Promise<void> {
-    await Promise.all([this.loadTours(), this.loadSlides()]);
+    const [toursLoaded, slidesLoaded] = await Promise.all([this.loadTours(), this.loadSlides()]);
+    const isOnline = toursLoaded && slidesLoaded;
+    this.isDataOnline.set(isOnline);
+    if (isOnline) {
+      this.lastSyncAt.set(new Date());
+    }
   }
 
   private errorText(error: unknown, fallback: string): string {
