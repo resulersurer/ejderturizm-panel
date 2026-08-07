@@ -28,3 +28,23 @@ export async function ensureSlidesSchema(): Promise<void> {
     `;
   }
 }
+
+export async function ensureReservationsSchema(): Promise<void> {
+  const sql = getDatabase();
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS reservations (
+      id BIGSERIAL PRIMARY KEY,
+      tour_id BIGINT NOT NULL REFERENCES tours(id) ON DELETE RESTRICT,
+      full_name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      participants INTEGER NOT NULL DEFAULT 1 CHECK (participants BETWEEN 1 AND 30),
+      notes TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'confirmed', 'cancelled')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+}
