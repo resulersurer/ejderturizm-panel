@@ -17,6 +17,18 @@ export type Tour = {
 
 export type TourInput = Omit<Tour, 'id'>;
 
+export type Slide = {
+  id: number;
+  title: string;
+  location: string;
+  description: string;
+  imageUrl: string;
+  sortOrder: number;
+  active: boolean;
+};
+
+export type SlideInput = Omit<Slide, 'id'>;
+
 type SessionResponse = {
   authenticated: boolean;
   configured: boolean;
@@ -56,5 +68,21 @@ export class TourService {
 
   remove(id: number) {
     return this.http.delete<void>(`/api/tours?id=${id}`);
+  }
+
+  listSlides() {
+    return this.http.get<Slide[]>('/api/slides');
+  }
+
+  createSlide(slide: SlideInput) {
+    return this.http.post<Slide>('/api/slides', slide);
+  }
+
+  updateSlide(id: number, slide: Partial<SlideInput>) {
+    return this.http.patch<Slide>(`/api/slides?id=${id}`, slide);
+  }
+
+  removeSlide(id: number) {
+    return this.http.delete<void>(`/api/slides?id=${id}`);
   }
 }
