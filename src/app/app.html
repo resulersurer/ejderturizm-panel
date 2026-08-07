@@ -1,15 +1,57 @@
-<div class="admin-shell" [class.is-sidebar-open]="isSidebarOpen()">
-  <aside class="sidebar" aria-label="YÃ¶netim navigasyonu">
+@if (isAuthChecking()) {
+  <main class="login-shell" aria-label="Panel yükleniyor">
+    <section class="login-panel login-panel--loading">
+      <span class="material-symbols-outlined" aria-hidden="true">sync</span>
+      <h1>Yönetim paneli hazırlanıyor</h1>
+    </section>
+  </main>
+} @else if (!isAuthenticated()) {
+  <main class="login-shell" aria-labelledby="login-title">
+    <section class="login-panel">
+      <span class="login-panel__mark" aria-hidden="true">E</span>
+      <div>
+        <span>Ejder Turizm</span>
+        <h1 id="login-title">Yönetim paneline giriş</h1>
+        <p>Tur programlarını ve web sitesindeki yayın durumunu yönetin.</p>
+      </div>
+
+      <form (ngSubmit)="login()">
+        <label>
+          <span>Yönetici parolası</span>
+          <input
+            name="password"
+            type="password"
+            [(ngModel)]="password"
+            autocomplete="current-password"
+            placeholder="Parolanızı girin"
+            required
+          />
+        </label>
+        <button class="primary-button" type="submit" [disabled]="isBusy()">
+          <span class="material-symbols-outlined" aria-hidden="true">login</span>
+          <span>{{ isBusy() ? 'Kontrol ediliyor' : 'Giriş Yap' }}</span>
+        </button>
+      </form>
+
+      @if (errorMessage()) {
+        <p class="form-error" role="alert">{{ errorMessage() }}</p>
+      }
+    </section>
+  </main>
+}
+
+<div class="admin-shell" [class.is-sidebar-open]="isSidebarOpen()" [class.is-locked]="!isAuthenticated()">
+  <aside class="sidebar" aria-label="Yönetim navigasyonu">
     <div class="brand">
       <span class="brand__mark" aria-hidden="true">E</span>
       <span class="brand__copy">
         <strong>Ejder Turizm</strong>
-        <small>YÃ¶netim Paneli</small>
+        <small>Yönetim Paneli</small>
       </span>
     </div>
 
     <nav class="sidebar__nav">
-      <span class="sidebar__label">YÃ¶netim</span>
+      <span class="sidebar__label">Yönetim</span>
       @for (item of primaryNavigation; track item.label) {
         <button
           type="button"
@@ -25,7 +67,7 @@
         </button>
       }
 
-      <span class="sidebar__label sidebar__label--spaced">Ä°Ã§erik</span>
+      <span class="sidebar__label sidebar__label--spaced">İçerik</span>
       @for (item of contentNavigation; track item.label) {
         <button
           type="button"
@@ -47,9 +89,9 @@
         <span class="material-symbols-outlined" aria-hidden="true">settings</span>
         <span>Ayarlar</span>
       </button>
-      <button type="button" class="nav-item">
+      <button type="button" class="nav-item" (click)="logout()">
         <span class="material-symbols-outlined" aria-hidden="true">logout</span>
-        <span>Ã‡Ä±kÄ±ÅŸ Yap</span>
+        <span>Çıkış Yap</span>
       </button>
     </div>
   </aside>
@@ -57,13 +99,13 @@
   <button
     class="sidebar-backdrop"
     type="button"
-    aria-label="MenÃ¼yÃ¼ kapat"
+    aria-label="Menüyü kapat"
     (click)="toggleSidebar()"
   ></button>
 
   <div class="workspace">
     <header class="topbar">
-      <button class="icon-button mobile-menu" type="button" aria-label="MenÃ¼yÃ¼ aÃ§" (click)="toggleSidebar()">
+      <button class="icon-button mobile-menu" type="button" aria-label="Menüyü aç" (click)="toggleSidebar()">
         <span class="material-symbols-outlined" aria-hidden="true">menu</span>
       </button>
 
@@ -85,19 +127,51 @@
       <button class="profile-button" type="button">
         <span class="profile-button__avatar" aria-hidden="true">RE</span>
         <span class="profile-button__copy">
-          <strong>Resul ErsÃ¼rer</strong>
-          <small>YÃ¶netici</small>
+          <strong>Resul Ersürer</strong>
+          <small>Yönetici</small>
         </span>
         <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
       </button>
     </header>
 
     <main class="dashboard">
+      @if (setupRequired()) {
+        <section class="sync-banner sync-banner--warning" role="status">
+          <span class="material-symbols-outlined" aria-hidden="true">database</span>
+          <div>
+            <strong>Ortak tur veritabanı hazırlanmalı</strong>
+            <p>Bu işlem tabloyu oluşturur ve başlangıç turlarını ekler.</p>
+          </div>
+          <button class="primary-button" type="button" (click)="prepareDatabase()" [disabled]="isBusy()">
+            Veritabanını Hazırla
+          </button>
+        </section>
+      }
+
+      @if (notice()) {
+        <section class="sync-banner sync-banner--success" role="status">
+          <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+          <p>{{ notice() }}</p>
+          <button type="button" aria-label="Bildirimi kapat" (click)="notice.set('')">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          </button>
+        </section>
+      }
+
+      @if (errorMessage()) {
+        <section class="sync-banner sync-banner--error" role="alert">
+          <span class="material-symbols-outlined" aria-hidden="true">error</span>
+          <p>{{ errorMessage() }}</p>
+          <button type="button" aria-label="Hatayı kapat" (click)="errorMessage.set('')">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          </button>
+        </section>
+      }
       <section class="page-heading" aria-labelledby="dashboard-title">
         <div>
-          <span>07 AÄŸustos 2026, Cuma</span>
-          <h1 id="dashboard-title">Tur operasyonuna genel bakÄ±ÅŸ</h1>
-          <p>YayÄ±n durumlarÄ±nÄ± kontrol edin, programlarÄ± gÃ¼ncelleyin ve yeni iÃ§erik oluÅŸturun.</p>
+          <span>07 Ağustos 2026, Cuma</span>
+          <h1 id="dashboard-title">Tur operasyonuna genel bakış</h1>
+          <p>Yayın durumlarını kontrol edin, programları güncelleyin ve yeni içerik oluşturun.</p>
         </div>
         <button class="primary-button" type="button" (click)="openTourDialog()">
           <span class="material-symbols-outlined" aria-hidden="true">add</span>
@@ -105,7 +179,7 @@
         </button>
       </section>
 
-      <section class="metrics-grid" aria-label="Ã–zet gÃ¶stergeler">
+      <section class="metrics-grid" aria-label="Özet göstergeler">
         <article class="metric-card metric-card--teal">
           <div class="metric-card__top">
             <span>Toplam Tur</span>
@@ -117,29 +191,29 @@
 
         <article class="metric-card metric-card--green">
           <div class="metric-card__top">
-            <span>YayÄ±ndaki Turlar</span>
+            <span>Yayındaki Turlar</span>
             <span class="material-symbols-outlined" aria-hidden="true">campaign</span>
           </div>
           <strong>{{ publishedTourCount() }}</strong>
-          <small>Web sitesinde gÃ¶rÃ¼nÃ¼r</small>
+          <small>Web sitesinde görünür</small>
         </article>
 
         <article class="metric-card metric-card--coral">
           <div class="metric-card__top">
-            <span>YaklaÅŸan Hareket</span>
+            <span>Yaklaşan Hareket</span>
             <span class="material-symbols-outlined" aria-hidden="true">location_on</span>
           </div>
-          <strong>18 AÄŸu</strong>
-          <small>Karadeniz Batum Turu</small>
+          <strong>{{ nextTour()?.departureDate ? formatDate(nextTour()?.departureDate).slice(0, 6) : '-' }}</strong>
+          <small>{{ nextTour()?.title || 'Planlanmış tur yok' }}</small>
         </article>
 
         <article class="metric-card metric-card--gold">
           <div class="metric-card__top">
-            <span>Bekleyen Ä°Ã§erik</span>
+            <span>Bekleyen İçerik</span>
             <span class="material-symbols-outlined" aria-hidden="true">article</span>
           </div>
           <strong>7</strong>
-          <small>Onay veya dÃ¼zenleme bekliyor</small>
+          <small>Onay veya düzenleme bekliyor</small>
         </article>
       </section>
 
@@ -147,10 +221,10 @@
         <div class="tour-panel">
           <div class="panel-heading">
             <div>
-              <span>Tur YÃ¶netimi</span>
-              <h2>Tur programlarÄ±</h2>
+              <span>Tur Yönetimi</span>
+              <h2>Tur programları</h2>
             </div>
-            <a href="https://ejderturizm-web.vercel.app/" target="_blank" rel="noreferrer">Siteyi GÃ¶rÃ¼ntÃ¼le</a>
+            <a href="https://ejderturizm-web.vercel.app/" target="_blank" rel="noreferrer">Siteyi Görüntüle</a>
           </div>
 
           <div class="table-toolbar">
@@ -167,10 +241,10 @@
             <label class="status-filter">
               <span>Durum</span>
               <select [value]="statusFilter()" (change)="updateStatusFilter($event)">
-                <option>TÃ¼mÃ¼</option>
-                <option>YayÄ±nda</option>
-                <option>Taslak</option>
-                <option>YakÄ±nda</option>
+                <option value="all">Tümü</option>
+                <option value="published">Yayında</option>
+                <option value="draft">Taslak</option>
+                <option value="upcoming">Yakında</option>
               </select>
             </label>
           </div>
@@ -183,7 +257,7 @@
                   <th>Hareket Tarihi</th>
                   <th>Fiyat</th>
                   <th>Durum</th>
-                  <th><span class="visually-hidden">Ä°ÅŸlemler</span></th>
+                  <th><span class="visually-hidden">İşlemler</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -198,24 +272,25 @@
                         </span>
                       </div>
                     </td>
-                    <td>{{ tour.date }}</td>
-                    <td><strong class="price">{{ tour.price }}</strong></td>
+                    <td>{{ formatDate(tour.departureDate) }}</td>
+                    <td><strong class="price">{{ tour.priceLabel || 'Fiyat belirlenmedi' }}</strong></td>
                     <td>
                       <button
                         type="button"
                         class="status-badge"
-                        [class.status-badge--published]="tour.status === 'YayÄ±nda'"
-                        [class.status-badge--draft]="tour.status === 'Taslak'"
-                        [class.status-badge--upcoming]="tour.status === 'YakÄ±nda'"
-                        (click)="toggleTourStatus(tour.id)"
+                        [class.status-badge--published]="tour.status === 'published'"
+                        [class.status-badge--draft]="tour.status === 'draft'"
+                        [class.status-badge--upcoming]="tour.status === 'upcoming'"
+                        [disabled]="isBusy()"
+                        (click)="toggleTourStatus(tour)"
                       >
                         <span></span>
-                        {{ tour.status }}
+                        {{ statusLabel(tour.status) }}
                       </button>
                     </td>
                     <td>
                       <div class="row-actions">
-                        <button type="button" aria-label="Turu dÃ¼zenle">
+                        <button type="button" aria-label="Turu düzenle" (click)="openEditTour(tour)">
                           <span class="material-symbols-outlined" aria-hidden="true">edit</span>
                         </button>
                         <button type="button" aria-label="Turu sil" (click)="deleteTour(tour.id)">
@@ -226,7 +301,7 @@
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="5" class="empty-state">Arama kriterlerine uygun tur bulunamadÄ±.</td>
+                    <td colspan="5" class="empty-state">Arama kriterlerine uygun tur bulunamadı.</td>
                   </tr>
                 }
               </tbody>
@@ -237,36 +312,36 @@
         <aside class="activity-panel" aria-labelledby="activity-title">
           <div class="panel-heading">
             <div>
-              <span>Son Ä°ÅŸlemler</span>
-              <h2 id="activity-title">YayÄ±n akÄ±ÅŸÄ±</h2>
+              <span>Son İşlemler</span>
+              <h2 id="activity-title">Yayın akışı</h2>
             </div>
           </div>
 
           <ol class="activity-list">
             <li>
               <span class="activity-list__marker activity-list__marker--green"></span>
-              <div><strong>Karadeniz turu yayÄ±nlandÄ±</strong><small>BugÃ¼n, 10:24</small></div>
+              <div><strong>Karadeniz turu yayınlandı</strong><small>Bugün, 10:24</small></div>
             </li>
             <li>
               <span class="activity-list__marker activity-list__marker--coral"></span>
-              <div><strong>Ana slider gÃ¼ncellendi</strong><small>DÃ¼n, 17:40</small></div>
+              <div><strong>Ana slider güncellendi</strong><small>Dün, 17:40</small></div>
             </li>
             <li>
               <span class="activity-list__marker activity-list__marker--gold"></span>
-              <div><strong>Erken rezervasyon kampanyasÄ±</strong><small>DÃ¼n, 13:15</small></div>
+              <div><strong>Erken rezervasyon kampanyası</strong><small>Dün, 13:15</small></div>
             </li>
             <li>
               <span class="activity-list__marker"></span>
-              <div><strong>Yeni misafir yorumu eklendi</strong><small>05 AÄŸustos, 16:05</small></div>
+              <div><strong>Yeni misafir yorumu eklendi</strong><small>05 Ağustos, 16:05</small></div>
             </li>
           </ol>
 
           <div class="publish-health">
             <div>
               <span>Web sitesi durumu</span>
-              <strong><i></i> YayÄ±nda</strong>
+              <strong><i></i> Yayında</strong>
             </div>
-            <small>Son kontrol 2 dakika Ã¶nce</small>
+            <small>Son kontrol 2 dakika önce</small>
           </div>
         </aside>
       </section>
@@ -279,36 +354,52 @@
     <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="new-tour-title" (click)="$event.stopPropagation()">
       <header class="dialog__header">
         <div>
-          <span>Tur YÃ¶netimi</span>
-          <h2 id="new-tour-title">Yeni tur oluÅŸtur</h2>
+          <span>Tur Yönetimi</span>
+          <h2 id="new-tour-title">{{ editingTourId() ? 'Turu düzenle' : 'Yeni tur oluştur' }}</h2>
         </div>
         <button class="icon-button" type="button" aria-label="Pencereyi kapat" (click)="closeTourDialog()">
           <span class="material-symbols-outlined" aria-hidden="true">close</span>
         </button>
       </header>
 
-      <form (ngSubmit)="createTour()">
+      <form (ngSubmit)="saveTour()">
         <label>
-          <span>Tur adÄ±</span>
-          <input name="title" [(ngModel)]="draftTour.title" placeholder="Ã–rn. GAP Turu" required />
+          <span>Tur adı</span>
+          <input name="title" [(ngModel)]="draftTour.title" placeholder="Örn. GAP Turu" required />
         </label>
         <label>
           <span>Destinasyon</span>
-          <input name="destination" [(ngModel)]="draftTour.destination" placeholder="Åehir veya rota" required />
+          <input name="destination" [(ngModel)]="draftTour.destination" placeholder="Şehir veya rota" required />
         </label>
         <div class="dialog__split">
           <label>
             <span>Hareket tarihi</span>
-            <input name="date" type="date" [(ngModel)]="draftTour.date" />
+            <input name="date" type="date" [(ngModel)]="draftTour.departureDate" />
           </label>
           <label>
-            <span>BaÅŸlangÄ±Ã§ fiyatÄ±</span>
-            <input name="price" [(ngModel)]="draftTour.price" placeholder="15.900 TL" />
+            <span>Başlangıç fiyatı</span>
+            <input name="price" [(ngModel)]="draftTour.priceLabel" placeholder="15.900 TL" />
+          </label>
+        </div>
+        <label>
+          <span>Tur süresi</span>
+          <input name="duration" [(ngModel)]="draftTour.duration" placeholder="4 Gece 5 Gün" />
+        </label>
+        <div class="dialog__checks">
+          <label>
+            <input name="featured" type="checkbox" [(ngModel)]="draftTour.featured" />
+            <span>Öne çıkanlarda göster</span>
+          </label>
+          <label>
+            <input name="popular" type="checkbox" [(ngModel)]="draftTour.popular" />
+            <span>En çok tercih edilenlerde göster</span>
           </label>
         </div>
         <footer class="dialog__actions">
-          <button class="secondary-button" type="button" (click)="closeTourDialog()">VazgeÃ§</button>
-          <button class="primary-button" type="submit">Taslak OluÅŸtur</button>
+          <button class="secondary-button" type="button" (click)="closeTourDialog()">Vazgeç</button>
+          <button class="primary-button" type="submit" [disabled]="isBusy()">
+            {{ editingTourId() ? 'Değişiklikleri Kaydet' : 'Taslak Oluştur' }}
+          </button>
         </footer>
       </form>
     </section>
