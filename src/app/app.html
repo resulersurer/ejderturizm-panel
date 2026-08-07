@@ -61,7 +61,9 @@
         >
           <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
           <span>{{ item.label }}</span>
-          @if (item.badge) {
+          @if (item.label === 'Turlar' && pendingReservationCount()) {
+            <small>{{ pendingReservationCount() }}</small>
+          } @else if (item.badge) {
             <small>{{ item.badge }}</small>
           }
         </button>
@@ -237,6 +239,226 @@
               <div class="empty-state">Henüz slider içeriği eklenmedi.</div>
             }
           </div>
+        </section>
+      } @else if (activeSection() === 'Turlar') {
+        <section class="page-heading" aria-labelledby="tours-title">
+          <div>
+            <span>Satış ve Operasyon</span>
+            <h1 id="tours-title">Tur ve rezervasyon yönetimi</h1>
+            <p>Tur programlarını yayınlayın ve web sitesinden gelen rezervasyon taleplerini yönetin.</p>
+          </div>
+          <button class="primary-button" type="button" (click)="openTourDialog()">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            <span>Yeni Tur</span>
+          </button>
+        </section>
+
+        <section class="tour-workspace" aria-label="Tur yönetimi çalışma alanı">
+          <nav class="workspace-tabs" aria-label="Tur yönetimi görünümleri">
+            <button
+              type="button"
+              [class.is-active]="tourWorkspaceView() === 'tours'"
+              (click)="tourWorkspaceView.set('tours')"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">travel_explore</span>
+              <span>Tur Listesi</span>
+              <small>{{ tours().length }}</small>
+            </button>
+            <button
+              type="button"
+              [class.is-active]="tourWorkspaceView() === 'reservations'"
+              (click)="tourWorkspaceView.set('reservations')"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">confirmation_number</span>
+              <span>Rezervasyonlar</span>
+              @if (pendingReservationCount()) {
+                <small class="is-alert">{{ pendingReservationCount() }}</small>
+              } @else {
+                <small>{{ reservations().length }}</small>
+              }
+            </button>
+          </nav>
+
+          @if (tourWorkspaceView() === 'tours') {
+            <div class="tour-panel tour-panel--standalone">
+              <div class="panel-heading">
+                <div>
+                  <span>Tur Yönetimi</span>
+                  <h2>{{ tours().length }} tur programı</h2>
+                </div>
+                <a href="https://ejderturizm-web.vercel.app/" target="_blank" rel="noreferrer">Sitede Görüntüle</a>
+              </div>
+
+              <div class="table-toolbar">
+                <label class="table-search">
+                  <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                  <input
+                    type="search"
+                    placeholder="Tur veya destinasyon ara"
+                    [value]="searchTerm()"
+                    (input)="updateSearch($event)"
+                  />
+                </label>
+
+                <label class="status-filter">
+                  <span>Durum</span>
+                  <select [value]="statusFilter()" (change)="updateStatusFilter($event)">
+                    <option value="all">Tümü</option>
+                    <option value="published">Yayında</option>
+                    <option value="draft">Taslak</option>
+                    <option value="upcoming">Yakında</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Tur</th>
+                      <th>Hareket Tarihi</th>
+                      <th>Fiyat</th>
+                      <th>Rezervasyon</th>
+                      <th>Durum</th>
+                      <th><span class="visually-hidden">İşlemler</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (tour of filteredTours(); track tour.id) {
+                      <tr>
+                        <td>
+                          <div class="tour-cell">
+                            <span class="tour-cell__thumb" aria-hidden="true">{{ tourInitials(tour.title) }}</span>
+                            <span>
+                              <strong>{{ tour.title }}</strong>
+                              <small>{{ tour.destination }}</small>
+                            </span>
+                          </div>
+                        </td>
+                        <td>{{ formatDate(tour.departureDate) }}</td>
+                        <td><strong class="price">{{ tour.priceLabel || 'Fiyat belirlenmedi' }}</strong></td>
+                        <td>
+                          <button
+                            type="button"
+                            class="reservation-count"
+                            (click)="tourWorkspaceView.set('reservations')"
+                          >
+                            {{ reservationCountForTour(tour.id) }} talep
+                          </button>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            class="status-badge"
+                            [class.status-badge--published]="tour.status === 'published'"
+                            [class.status-badge--draft]="tour.status === 'draft'"
+                            [class.status-badge--upcoming]="tour.status === 'upcoming'"
+                            [disabled]="isBusy()"
+                            (click)="toggleTourStatus(tour)"
+                          >
+                            <span></span>
+                            {{ statusLabel(tour.status) }}
+                          </button>
+                        </td>
+                        <td>
+                          <div class="row-actions">
+                            <button type="button" aria-label="Turu düzenle" (click)="openEditTour(tour)">
+                              <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                            </button>
+                            <button type="button" aria-label="Turu sil" (click)="deleteTour(tour.id)">
+                              <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="6" class="empty-state">Arama kriterlerine uygun tur bulunamadı.</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          } @else {
+            <div class="reservation-panel">
+              <div class="reservation-summary" aria-label="Rezervasyon özeti">
+                <div><span>Toplam Talep</span><strong>{{ reservations().length }}</strong></div>
+                <div><span>Bekleyen</span><strong>{{ pendingReservationCount() }}</strong></div>
+                <div><span>Onaylanan</span><strong>{{ confirmedReservationCount() }}</strong></div>
+              </div>
+
+              <div class="panel-heading">
+                <div>
+                  <span>Rezervasyon Talepleri</span>
+                  <h2>Web sitesinden gelen başvurular</h2>
+                </div>
+                <small>En yeni talepler önce gösterilir</small>
+              </div>
+
+              <div class="table-scroll">
+                <table class="reservation-table">
+                  <thead>
+                    <tr>
+                      <th>Başvuru</th>
+                      <th>Tur</th>
+                      <th>Misafir</th>
+                      <th>İletişim</th>
+                      <th>Kişi</th>
+                      <th>Not</th>
+                      <th>Durum</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (reservation of reservations(); track reservation.id) {
+                      <tr>
+                        <td>
+                          <div class="reservation-reference">
+                            <strong>#{{ reservation.id }}</strong>
+                            <small>{{ formatDateTime(reservation.createdAt) }}</small>
+                          </div>
+                        </td>
+                        <td><strong class="reservation-tour">{{ reservation.tourTitle }}</strong></td>
+                        <td><strong>{{ reservation.fullName }}</strong></td>
+                        <td>
+                          <div class="contact-links">
+                            <a [href]="'tel:' + reservation.phone">{{ reservation.phone }}</a>
+                            <a [href]="'mailto:' + reservation.email">{{ reservation.email }}</a>
+                          </div>
+                        </td>
+                        <td>{{ reservation.participants }}</td>
+                        <td>
+                          <span class="reservation-note" [title]="reservation.notes">
+                            {{ reservation.notes || 'Not yok' }}
+                          </span>
+                        </td>
+                        <td>
+                          <select
+                            class="reservation-status"
+                            [class.reservation-status--pending]="reservation.status === 'pending'"
+                            [class.reservation-status--confirmed]="reservation.status === 'confirmed'"
+                            [class.reservation-status--cancelled]="reservation.status === 'cancelled'"
+                            [value]="reservation.status"
+                            [disabled]="isBusy()"
+                            (change)="updateReservationStatus(reservation, $event)"
+                            [attr.aria-label]="reservation.fullName + ' rezervasyon durumunu değiştir'"
+                          >
+                            <option value="pending">Bekliyor</option>
+                            <option value="confirmed">Onaylandı</option>
+                            <option value="cancelled">İptal edildi</option>
+                          </select>
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="7" class="empty-state">Henüz rezervasyon talebi bulunmuyor.</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
         </section>
       } @else {
       <section class="page-heading" aria-labelledby="dashboard-title">
